@@ -1,0 +1,70 @@
+{
+  "hardware": {
+    "wheel_diameter_m": 0.079,
+    "wheelbase_m": 0.396503,
+    "max_rpm": 60,
+    "encoder_counts_per_rev": 12,
+    "antenna_offset_x_m": 0.0,
+    "antenna_offset_y_m": -0.340,
+    "antenna_offset_z_m": -0.196268,
+    "imu_offset_x_m": 0.0,
+    "imu_offset_y_m": -0.292235,
+    "imu_offset_z_m": -0.19375
+  },
+  "serial_ports": {
+    "gnss": "/dev/ttyACM1",
+    "motor_controller": "/dev/ttyACM0",
+    "gnss_baudrate": 115200,
+    "motor_baudrate": 38400,
+    "roboclaw_address": 129
+  },
+  "ntrip": {
+    "server": "sapos-nw-ntrip.de",
+    "port": 2101,
+    "mountpoint": "VRS_3_4G_NW",
+    "username": "nw-9112470",
+    "password": "123ABCde",
+    "ref_lat": 50.9333833,
+    "ref_lon": 6.9885841,
+    "ref_alt": 0
+  },
+  "navigation": {
+    "max_speed_ms": 0.5,
+    "min_speed_ms": 0.1,
+    "max_acceleration_ms2": 0.3,
+    "waypoint_reached_threshold_m": 0.3,
+    "line_following_tolerance_m": 0.05,
+    "rotation_speed_ms": 0.2,
+    "heading_tolerance_deg": 5.0,
+    "update_rate_hz": 10
+  },
+  "control": {
+    "steering_pid": {
+      "kp": 0.8,
+      "ki": 0.05,
+      "kd": 0.2,
+      "output_limit": 0.15
+    },
+    "cross_track_pid": {
+      "kp": 2.0,
+      "ki": 0.1,
+      "kd": 0.5,
+      "output_limit": 0.5
+    }
+  },
+  "kalman_filter": {
+    "process_noise": 0.001,
+    "measurement_noise_rtk_fixed": 0.01,
+    "measurement_noise_rtk_float": 0.05,
+    "measurement_noise_gps": 0.5
+  },
+  "safety": {
+    "min_satellites": 8,
+    "max_hdop": 2.0,
+    "require_rtk": true,
+    "min_rtk_quality": 4,
+    "emergency_stop_enabled": true,
+    "max_connection_loss_s": 30.0,
+    "rtk_loss_stop_enabled": true
+  }
+}

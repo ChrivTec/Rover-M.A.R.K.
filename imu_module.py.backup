@@ -1,0 +1,250 @@
+"""
+IMU Module for BNO085 9-DoF sensor
+Provides heading, roll, and pitch using sensor fusion
+"""
+
+import logging
+import time
+from typing import Optional
+import board
+import busio
+from adafruit_bno08x import (
+    BNO_REPORT_ROTATION_VECTOR,
+    BNO08X_I2C
+)
+import math
+
+logger = logging.getLogger(__name__)
+
+
+class IMUModule:
+    """
+    BNO085 IMU interface using Adafruit CircuitPython library
+    
+    Provides heading (compass direction), roll, and pitch from
+    quaternion-based 9-DoF sensor fusion
+    """
+    
+    def __init__(
+        self,
+        i2c_bus: int = 1,
+        address: int = 0x4A,  # Default BNO08x address
+        ndof_mode: bool = True
+    ):
+        """
+        Initialize IMU module
+        
+        Args:
+            i2c_bus: I2C bus number (default: 1 for /dev/i2c-1)
+            address: I2C address (default: 0x4A for BNO08x)
+            ndof_mode: Use NDOF (9-DoF fusion) mode
+        """
+        self.i2c_bus = i2c_bus
+        self.address = address
+        self.ndof_mode = ndof_mode
+        
+        self.i2c = None
+        self.sensor = None
+        self.connected = False
+        
+        # Orientation data
+        self.heading = 0.0  # 0-360°, 0=North, CCW positive
+        self.roll = 0.0     # -180 to +180°
+        self.pitch = 0.0    # -90 to +90°
+        
+        # Quaternion data
+        self.quat_i = 0.0
+        self.quat_j = 0.0
+        self.quat_k = 0.0
+        self.quat_real = 0.0
+        
+        self.calibration_status = 0
+        
+        logger.info(f"IMU Module initialized on I2C bus {i2c_bus}, address 0x{address:02X}")
+    
+    def connect(self) -> bool:
+        """
+        Connect to BNO085 via I2C
+        
+        Returns:
+            True if connection successful
+        """
+        try:
+            # Initialize I2C bus
+            self.i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
+            
+            # Initialize BNO08x sensor
+            self.sensor = BNO08X_I2C(self.i2c, address=self.address)
+            
+            # Enable rotation vector (quaternion output)
+            self.sensor.enable_feature(BNO_REPORT_ROTATION_VECTOR)
+            
+            self.connected = True
+            logger.info("Connected to BNO085 IMU")
+            
+            # Wait for first reading
+            time.sleep(0.1)
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to connect to IMU: {e}")
+            self.connected = False
+            return False
+    
+    def disconnect(self) -> None:
+        """
+        Disconnect from IMU
+        """
+        if self.i2c:
+            try:
+                self.i2c.deinit()
+            except:
+                pass
+        self.connected = False
+        logger.info("IMU disconnected")
+    
+    def update(self) -> bool:
+        """
+        Read current orientation data from IMU
+        
+        Returns:
+            True if data was read successfully
+        """
+        if not self.connected or not self.sensor:
+            return False
+        
+        try:
+            # Read quaternion
+            quat_i, quat_j, quat_k, quat_real = self.sensor.quaternion
+            
+            if quat_i is None or quat_j is None or quat_k is None or quat_real is None:
+                return False
+            
+            self.quat_i = quat_i
+            self.quat_j = quat_j
+            self.quat_k = quat_k
+            self.quat_real = quat_real
+            
+            # Convert quaternion to Euler angles
+            self._quaternion_to_euler()
+            
+            return True
+            
+        except Exception as e:
+            logger.warning(f"IMU update error: {e}")
+            return False
+    
+    def _quaternion_to_euler(self) -> None:
+        """
+        Convert quaternion to Euler angles (heading, roll, pitch)
+        
+        BNO08x quaternion format: (i, j, k, real) where real is w
+        Standard quaternion: q = w + xi + yj + zk
+        """
+        qw = self.quat_real
+        qx = self.quat_i
+        qy = self.quat_j
+        qz = self.quat_k
+        
+        # Roll (x-axis rotation)
+        sinr_cosp = 2.0 * (qw * qx + qy * qz)
+        cosr_cosp = 1.0 - 2.0 * (qx * qx + qy * qy)
+        self.roll = math.degrees(math.atan2(sinr_cosp, cosr_cosp))
+        
+        # Pitch (y-axis rotation)
+        sinp = 2.0 * (qw * qy - qz * qx)
+        if abs(sinp) >= 1:
+            self.pitch = math.copysign(90.0, sinp)  # Use 90° if out of range
+        else:
+            self.pitch = math.degrees(math.asin(sinp))
+        
+        # Yaw/Heading (z-axis rotation)
+        siny_cosp = 2.0 * (qw * qz + qx * qy)
+        cosy_cosp = 1.0 - 2.0 * (qy * qy + qz * qz)
+        yaw = math.degrees(math.atan2(siny_cosp, cosy_cosp))
+        
+        # Convert yaw to heading (0-360°, 0=North, clockwise)
+        # Yaw is typically -180 to +180, we need 0-360
+        self.heading = (yaw + 360.0) % 360.0
+    
+    def get_heading(self) -> float:
+        """
+        Get current heading
+        
+        Returns:
+            Heading in degrees (0-360°, 0=North, 90=East, 180=South, 270=West)
+        """
+        return self.heading
+    
+    def get_roll(self) -> float:
+        """
+        Get current roll
+        
+        Returns:
+            Roll in degrees (-180 to +180°)
+        """
+        return self.roll
+    
+    def get_pitch(self) -> float:
+        """
+        Get current pitch
+        
+        Returns:
+            Pitch in degrees (-90 to +90°)
+        """
+        return self.pitch
+    
+    def get_status(self) -> dict:
+        """
+        Get comprehensive IMU status
+        
+        Returns:
+            Dictionary with all IMU data
+        """
+        return {
+            'heading': self.heading,
+            'roll': self.roll,
+            'pitch': self.pitch,
+            'quaternion': {
+                'i': self.quat_i,
+                'j': self.quat_j,
+                'k': self.quat_k,
+                'real': self.quat_real
+            },
+            'calibration_status': self.calibration_status,
+            'connected': self.connected
+        }
+    
+    def calibrate_magnetometer(self, duration_s: int = 30) -> bool:
+        """
+        Perform magnetometer calibration
+        
+        Rotate the rover 360° slowly during this time for best calibration.
+        
+        Args:
+            duration_s: Calibration duration in seconds
+        
+        Returns:
+            True if calibration successful
+        """
+        logger.info(f"Starting magnetometer calibration ({duration_s}s)")
+        logger.info("Please rotate the rover 360° slowly...")
+        
+        start_time = time.time()
+        
+        try:
+            while (time.time() - start_time) < duration_s:
+                self.update()
+                time.sleep(0.1)
+                
+                remaining = duration_s - (time.time() - start_time)
+                if int(remaining) % 5 == 0:
+                    logger.info(f"Calibrating... {int(remaining)}s remaining")
+            
+            logger.info("Magnetometer calibration complete")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Calibration failed: {e}")
+            return False

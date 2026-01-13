@@ -1,0 +1,36 @@
+{
+    "id": "20260106_test_route",
+    "name": "Test Route - SAPOS NW Reference Area",
+    "waypoints": [
+        {
+            "lat": 50.9333833,
+            "lon": 6.9885841,
+            "action": "forward",
+            "speed_ms": 0.3
+        },
+        {
+            "lat": 50.9334000,
+            "lon": 6.9885841,
+            "action": "forward",
+            "speed_ms": 0.3
+        },
+        {
+            "lat": 50.9334000,
+            "lon": 6.9886000,
+            "action": "forward",
+            "speed_ms": 0.25
+        },
+        {
+            "lat": 50.9333833,
+            "lon": 6.9886000,
+            "action": "forward",
+            "speed_ms": 0.25
+        },
+        {
+            "lat": 50.9333833,
+            "lon": 6.9885841,
+            "action": "forward",
+            "speed_ms": 0.3
+        }
+    ]
+}
