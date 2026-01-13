@@ -32,7 +32,7 @@ class TestHaversineDistance:
         """Test small distance (typical waypoint spacing)"""
         # 0.0001 degrees ~ 11 meters
         dist = haversine_distance(50.9379, 6.9580, 50.9380, 6.9580)
-        assert 100 < dist < 120
+        assert 10 < dist < 12
 
 
 class TestCalculateBearing:
