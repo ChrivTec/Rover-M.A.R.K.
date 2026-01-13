@@ -20,6 +20,21 @@ ROVER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "Rover directory: $ROVER_DIR"
 echo ""
 
+# Parse config.json for NTRIP settings using python
+# We use a small python script to extract the values safely
+echo "Reading NTRIP configuration from config.json..."
+NTRIP_URL=$(python3 -c "import json; f=open('$ROVER_DIR/config.json'); c=json.load(f); n=c['ntrip']; print(f'ntrip://{n['username']}:{n['password']}@{n['server']}:{n['port']}/{n['mountpoint']}')")
+REF_LAT=$(python3 -c "import json; f=open('$ROVER_DIR/config.json'); c=json.load(f); print(c['ntrip']['ref_lat'])")
+REF_LON=$(python3 -c "import json; f=open('$ROVER_DIR/config.json'); c=json.load(f); print(c['ntrip']['ref_lon'])")
+REF_ALT=$(python3 -c "import json; f=open('$ROVER_DIR/config.json'); c=json.load(f); print(c['ntrip'].get('ref_alt', 0))")
+GNSS_PORT=$(python3 -c "import json; f=open('$ROVER_DIR/config.json'); c=json.load(f); print(c['serial_ports']['gnss'].replace('/dev/', ''))")
+GNSS_BAUD=$(python3 -c "import json; f=open('$ROVER_DIR/config.json'); c=json.load(f); print(c['serial_ports']['gnss_baudrate'])")
+
+echo "  URL: $NTRIP_URL"
+echo "  Ref: $REF_LAT, $REF_LON, $REF_ALT"
+echo "  Out: serial://$GNSS_PORT:$GNSS_BAUD"
+echo ""
+
 # Create RTK/NTRIP service
 echo "Creating rtk-ntrip.service..."
 cat > /etc/systemd/system/rtk-ntrip.service << EOF
@@ -34,10 +49,10 @@ Type=simple
 User=root
 WorkingDirectory=/root
 ExecStart=/usr/local/bin/str2str \\
-    -in ntrip://nw-9112470:123ABCde@sapos-nw-ntrip.de:2101/VRS_3_4G_NW \\
-    -p 50.9333833 6.9885841 0 \\
+    -in $NTRIP_URL \\
+    -p $REF_LAT $REF_LON $REF_ALT \\
     -n 1 \\
-    -out serial://ttyACM1:115200
+    -out serial://$GNSS_PORT:$GNSS_BAUD
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -52,6 +67,13 @@ echo ""
 
 # Create Rover Control service
 echo "Creating rover-control.service..."
+# Check for virtual environment
+PYTHON_EXEC="/usr/bin/python3"
+if [ -d "$ROVER_DIR/venv" ]; then
+    PYTHON_EXEC="$ROVER_DIR/venv/bin/python3"
+    echo "  Using virtual environment: $PYTHON_EXEC"
+fi
+
 cat > /etc/systemd/system/rover-control.service << EOF
 [Unit]
 Description=M.A.R.K. Rover Control System
@@ -62,7 +84,7 @@ Requires=rtk-ntrip.service
 Type=simple
 User=root
 WorkingDirectory=$ROVER_DIR
-ExecStart=/usr/bin/python3 main.py
+ExecStart=$PYTHON_EXEC main.py
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
