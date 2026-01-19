@@ -22,8 +22,8 @@
     "server": "sapos-nw-ntrip.de",
     "port": 2101,
     "mountpoint": "VRS_3_4G_NW",
-    "username": "nw-9112470",
-    "password": "123ABCde",
+    "username": "",
+    "password": "",
     "ref_lat": 50.9333833,
     "ref_lon": 6.9885841,
     "ref_alt": 0
@@ -67,4 +67,5 @@
     "max_connection_loss_s": 30.0,
     "rtk_loss_stop_enabled": true
   }
+
 }

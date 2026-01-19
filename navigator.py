@@ -182,17 +182,19 @@ class Navigator:
         # Determine rotation direction
         # Tank-style: One wheel forward (+), other backward (-)
         if error > 0:
-            # Need to turn left (CCW)
-            # Left wheel backward, right wheel forward
-            v_left = -self.rotation_speed
-            v_right = +self.rotation_speed
-            logger.debug(f"Rotating LEFT: error={error:.1f}°, v_left={v_left}, v_right={v_right}")
-        else:
-            # Need to turn right (CW)
+            # Error > 0 means Target is Right of Current (e.g. Current=0, Target=90 -> Error=90)
+            # Need to turn RIGHT (CW)
             # Left wheel forward, right wheel backward
             v_left = +self.rotation_speed
             v_right = -self.rotation_speed
-            logger.debug(f"Rotating RIGHT: error={error:.1f}°, v_left={v_left}, v_right={v_right}")
+            logger.debug(f"Rotating RIGHT (CW): error={error:.1f}°, v_left={v_left}, v_right={v_right}")
+        else:
+            # Error < 0 means Target is Left of Current
+            # Need to turn LEFT (CCW)
+            # Left wheel backward, right wheel forward
+            v_left = -self.rotation_speed
+            v_right = +self.rotation_speed
+            logger.debug(f"Rotating LEFT (CCW): error={error:.1f}°, v_left={v_left}, v_right={v_right}")
         
         return v_left, v_right
     

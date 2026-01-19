@@ -7,9 +7,6 @@ numpy>=1.24.0
 # Serial communication
 pyserial>=3.5
 
-# GNSS/NMEA parsing
-pynmea2>=1.18.0
-
 # IMU (BNO085) - Adafruit CircuitPython
 adafruit-circuitpython-bno08x>=1.2.0
 adafruit-blinka>=8.20.0
